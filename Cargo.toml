@@ -5,3 +5,5 @@ authors = ["Sjoerd <sjoerd-github@linuxonly.nl>"]
 edition = "2018"
 
 [dependencies]
+pest = "2.1.2"
+pest_derive = "2.1.0"

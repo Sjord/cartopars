@@ -1,0 +1,92 @@
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT = _{ ("//" ~ (!NEWLINE ~ ANY)*) | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+identifier = @{ ASCII_ALPHA ~ ("-" | "_" | ASCII_ALPHANUMERIC)* }
+
+instance = { identifier }
+property = { identifier }
+
+// missing "*"
+// missing -foo
+declaration = { (instance ~ "/")? ~ property ~ ":" ~ values }
+
+// value = { color | url | string | boolean | expression | number | percentage | function }  
+value = { color | url | boolean | string_expr | percentage | expression | number | variable | function | keyword | field }
+
+field = { "[" ~ identifier ~ "]" }
+
+function = { identifier ~ "(" ~ value ~ ("," ~ value)* ~ ")" }
+
+
+
+// Support nested expressions, e.g. @a + 3 * 5 and make them work as expected
+// Support parentheses
+// expression = { (number | variable) ~ operand ~ (number | variable) }
+// operand = { "+" | "-" | "*"  | "/" | "%" }
+// name these better
+expression = { exp_term ~ "+" ~ expression | exp_term ~ "-" ~ expression | exp_term }
+exp_term = { factor ~ "*" ~ exp_term | factor ~ "/" ~ exp_term | factor }
+factor = { "(" ~ expression ~ ")" | number | variable }
+
+string_expr = { (string | field) ~ ("+" ~ (string | field))* }
+
+
+
+
+boolean = { "true" | "false" }
+
+variable = @{ "@" ~ ( ASCII_ALPHANUMERIC | "_" | "-" )+ }
+
+keyword = { identifier }
+
+
+percentage = { number ~ "%" }
+
+// stringchar = { escape | latin1 | [ !#$%&(-~] }
+// handle backslashes
+// stringchar = { " " | "!" | "#" | "$" | "%" | "&" | '('..'~' }
+// string = @{ "\"" ~ (stringchar | "'")* ~ "\"" | "'" ~ (stringchar | "\"")* ~ "'"}
+string_body = @{ (!PEEK ~ ANY)* }
+string = ${ PUSH("\"" | "'") ~ string_body ~ POP}
+
+// Comma separated list of values
+values = { value ~ ("," ~ value)* }
+
+// missing 2e3
+// don't allow starting with 0
+// interpret hex or octal numbers?
+number = { "-"? ~ ('0'..'9'+ ~ ("." ~ '0'..'9'*)?) | ("." ~ '0'..'9'+) }
+color = { color_hex_long | color_hex_short | color_function | color_keyword }
+color_hex_short = @{ "#" ~ ASCII_HEX_DIGIT{3} }
+color_hex_long = @{ "#" ~ ASCII_HEX_DIGIT{6} }
+
+// handle unquoted urls
+url_value = { string }
+url = { "url(" ~ url_value ~ ")" }
+
+// optionally set number of arguments
+color_function = { color_function_name ~ "(" ~ number ~ ("," ~ number){2,3} ~ ")" }
+// hsluva ?
+color_function_name = { "rgba" | "rgb" | "hsla" | "hsl" }
+
+color_keyword = { "aliceblue" | "antiquewhite" | "aqua" | "aquamarine" | "azure" | "beige" | "bisque" | "black" | "blanchedalmond" | "blue" | "blueviolet" | "brown" | "burlywood" | "cadetblue" | "chartreuse" | "chocolate" | "coral" | "cornflowerblue" | "cornsilk" | "crimson" | "cyan" | "darkblue" | "darkcyan" | "darkgoldenrod" | "darkgray" | "darkgreen" | "darkgrey" | "darkkhaki" | "darkmagenta" | "darkolivegreen" | "darkorange" | "darkorchid" | "darkred" | "darksalmon" | "darkseagreen" | "darkslateblue" | "darkslategrey" | "darkturquoise" | "darkviolet" | "deeppink" | "deepskyblue" | "dimgray" | "dimgrey" | "dodgerblue" | "firebrick" | "floralwhite" | "forestgreen" | "fuchsia" | "gainsboro" | "ghostwhite" | "gold" | "goldenrod" | "gray" | "grey" | "green" | "greenyellow" | "honeydew" | "hotpink" | "indianred" | "indigo" | "ivory" | "khaki" | "lavender" | "lavenderblush" | "lawngreen" | "lemonchiffon" | "lightblue" | "lightcoral" | "lightcyan" | "lightgoldenrodyellow" | "lightgray" | "lightgreen" | "lightgrey" | "lightpink" | "lightsalmon" | "lightseagreen" | "lightskyblue" | "lightslategray" | "lightslategrey" | "lightsteelblue" | "lightyellow" | "lime" | "limegreen" | "linen" | "magenta" | "maroon" | "mediumaquamarine" | "mediumblue" | "mediumorchid" | "mediumpurple" | "mediumseagreen" | "mediumslateblue" | "mediumspringgreen" | "mediumturquoise" | "mediumvioletred" | "midnightblue" | "mintcream" | "mistyrose" | "moccasin" | "navajowhite" | "navy" | "oldlace" | "olive" | "olivedrab" | "orange" | "orangered" | "orchid" | "palegoldenrod" | "palegreen" | "paleturquoise" | "palevioletred" | "papayawhip" | "peachpuff" | "peru" | "pink" | "plum" | "powderblue" | "purple" | "red" | "rosybrown" | "royalblue" | "saddlebrown" | "salmon" | "sandybrown" | "seagreen" | "seashell" | "sienna" | "silver" | "skyblue" | "slateblue" | "slategray" | "slategrey" | "snow" | "springgreen" | "steelblue" | "tan" | "teal" | "thistle" | "tomato" | "turquoise" | "violet" | "wheat" | "white" | "whitesmoke" | "yellow" | "yellowgreen" | "transparent" }
+
+
+comparison = { "!=" | ">=" | ">" | "=" | "<=" | "<" }
+layer = @{ "#" ~ identifier }
+class = @{ "." ~ identifier }
+attachment = @{ "::" ~ identifier}
+// support expressions, strings, variables, etc.
+filter = { "[" ~ ( identifier | string ) ~ comparison ~ (number | string | boolean | "null") ~ "]" }
+// Allow just one attachment
+selector = { ("Map" | layer | class | filter | attachment)+ }
+
+declarations = { declaration ~ (";" ~ declaration?)* } 
+
+// apparently [a=b],{ is valid
+ruleset = { selector ~ ("," ~ selector)* ~ ","? ~ "{" ~ (declarations | ruleset)* ~ "}" }
+
+assignment = { variable ~ ":" ~ values ~ ";" }
+
+stylesheet = { SOI ~ (assignment | ruleset)* ~ EOI }
