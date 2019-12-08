@@ -1,0 +1,7 @@
+[package]
+name = "cartopars"
+version = "0.1.0"
+authors = ["Sjoerd <sjoerd-github@linuxonly.nl>"]
+edition = "2018"
+
+[dependencies]
