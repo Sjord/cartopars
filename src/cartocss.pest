@@ -1,8 +1,8 @@
 
-WHITESPACE = _{ " " | "\t" | NEWLINE }
+WHITESPACE = _{ " " | "\n" | "\t" }
 COMMENT = _{ ("//" ~ (!NEWLINE ~ ANY)*) | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
-identifier = @{ ASCII_ALPHA ~ ("-" | "_" | ASCII_ALPHANUMERIC)* }
+identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "-" | "_")* }
 
 instance = { identifier }
 property = { identifier }
@@ -11,19 +11,12 @@ property = { identifier }
 // missing -foo
 declaration = { (instance ~ "/")? ~ property ~ ":" ~ values }
 
-// value = { color | url | string | boolean | expression | number | percentage | function }  
-value = { color | url | boolean | string_expr | percentage | expression | number | variable | function | keyword | field }
+value = { url | boolean | string_expr | percentage | expression | color | function | keyword | field }
 
 field = { "[" ~ identifier ~ "]" }
 
 function = { identifier ~ "(" ~ value ~ ("," ~ value)* ~ ")" }
 
-
-
-// Support nested expressions, e.g. @a + 3 * 5 and make them work as expected
-// Support parentheses
-// expression = { (number | variable) ~ operand ~ (number | variable) }
-// operand = { "+" | "-" | "*"  | "/" | "%" }
 // name these better
 expression = { exp_term ~ "+" ~ expression | exp_term ~ "-" ~ expression | exp_term }
 exp_term = { factor ~ "*" ~ exp_term | factor ~ "/" ~ exp_term | factor }
@@ -31,12 +24,9 @@ factor = { "(" ~ expression ~ ")" | number | variable }
 
 string_expr = { (string | field) ~ ("+" ~ (string | field))* }
 
-
-
-
 boolean = { "true" | "false" }
 
-variable = @{ "@" ~ ( ASCII_ALPHANUMERIC | "_" | "-" )+ }
+variable = @{ "@" ~ identifier }
 
 keyword = { identifier }
 
@@ -48,7 +38,7 @@ percentage = { number ~ "%" }
 // stringchar = { " " | "!" | "#" | "$" | "%" | "&" | '('..'~' }
 // string = @{ "\"" ~ (stringchar | "'")* ~ "\"" | "'" ~ (stringchar | "\"")* ~ "'"}
 string_body = @{ (!PEEK ~ ANY)* }
-string = ${ PUSH("\"" | "'") ~ string_body ~ POP}
+string = ${ PUSH("'" | "\"") ~ string_body ~ POP}
 
 // Comma separated list of values
 values = { value ~ ("," ~ value)* }
