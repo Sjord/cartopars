@@ -29,9 +29,11 @@ fn main() {
     let mut sw = Stopwatch::new();
     for ss in stylesheets {
         let path = mml_path.with_file_name(ss.as_str().unwrap());
-        let contents = fs::read_to_string(path).unwrap();
+        let contents = fs::read_to_string(&path).unwrap();
         sw.start();
-        let ast = CartoParser::parse(Rule::stylesheet, &contents).unwrap();
+        let ast = CartoParser::parse(Rule::stylesheet, &contents)
+            .map_err(|e| e.with_path(path.to_str().unwrap()))
+            .unwrap();
         sw.stop();
         println!("{} {}", ss.as_str().unwrap(), sw.elapsed_ms());
         sw.reset();
