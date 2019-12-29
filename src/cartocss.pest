@@ -79,4 +79,6 @@ ruleset = { selector ~ ("," ~ selector)* ~ ","? ~ "{" ~ (declarations | ruleset)
 
 assignment = { variable ~ ":" ~ values ~ ";" }
 
-stylesheet = { SOI ~ (assignment | ruleset)* ~ EOI }
+statement = { assignment | ruleset }
+
+stylesheet = { SOI ~ statement* ~ EOI }

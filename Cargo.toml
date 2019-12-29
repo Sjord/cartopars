@@ -7,5 +7,6 @@ edition = "2018"
 [dependencies]
 pest = "2.1.2"
 pest_derive = "2.1.0"
+pest_consume = "1.0.2"
 yaml-rust = "0.4"
 stopwatch = "0.0.7"
