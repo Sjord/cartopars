@@ -75,7 +75,10 @@ selector = { ("Map" | layer | class | filter | attachment)+ }
 declarations = { declaration ~ (";" ~ declaration?)* } 
 
 // apparently [a=b],{ is valid
-ruleset = { selector ~ ("," ~ selector)* ~ ","? ~ "{" ~ (declarations | ruleset)* ~ "}" }
+// ruleset = { selector ~ ("," ~ selector)* ~ ","? ~ "{" ~ (declarations | ruleset)* ~ "}" }
+selectors = { selector ~ ("," ~ selector)* } 
+ruleset_body = { (declarations | ruleset)* }
+ruleset = { selectors ~ ","? ~ "{" ~ ruleset_body ~ "}" }
 
 assignment = { variable ~ ":" ~ values ~ ";" }
 

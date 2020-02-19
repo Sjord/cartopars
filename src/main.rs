@@ -22,11 +22,15 @@ use pest::iterators::Pairs;
 type Node<'i> = pest_consume::Node<'i, Rule, ()>;
 type Result<T> = std::result::Result<T, Error<Rule>>;
 
-type Ruleset = String;
-
 #[derive(Parser)]
 #[grammar = "cartocss.pest"]
 struct CartoParser;
+
+#[derive(Debug)]
+struct Ruleset {
+    selectors: String,
+    ruleset_body: String
+}
 
 #[derive(Debug)]
 enum Statement {
@@ -64,6 +68,14 @@ impl CartoParser {
         Ok(input.as_str().to_owned())
     }
 
+    fn selectors(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn ruleset_body(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
     fn assignment(input: Node) -> Result<Assignment> {
         Ok(match_nodes!(input.into_children();
             [variable(k), values(v)] => Assignment { key: k, value: v }
@@ -71,7 +83,9 @@ impl CartoParser {
     }
 
     fn ruleset(input: Node) -> Result<Ruleset> {
-        Ok(input.as_str().to_owned())
+        Ok(match_nodes!(input.into_children();
+            [selectors(selectors), ruleset_body(ruleset_body)] => Ruleset { selectors, ruleset_body }
+        ))
     }
 
     fn statement(input: Node) -> Result<Statement> {
