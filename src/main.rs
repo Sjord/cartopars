@@ -1,6 +1,7 @@
 use std::fs;
 use std::env;
 use std::path::Path;
+use std::collections::HashMap;
 
 extern crate pest;
 #[macro_use]
@@ -39,6 +40,7 @@ struct Assignment {
     value: String,
 }
 
+#[derive(Debug)]
 struct Stylesheet {
     assignments: Vec<Assignment>,
     rulesets: Vec<Ruleset>
@@ -79,10 +81,19 @@ impl CartoParser {
         ))
     }
 
-    fn stylesheet(input: Node) -> Result<Vec<Statement>> {
-        Ok(match_nodes!(input.into_children();
+    fn stylesheet(input: Node) -> Result<Stylesheet> {
+        let statements : Vec<Statement> = match_nodes!(input.into_children();
             [statement(s).., EOI(_)] => s.collect(),
-        ))
+        );
+        let mut assignments : Vec<Assignment> = Vec::new();
+        let mut rulesets : Vec<Ruleset> = Vec::new();
+        for s in statements {
+            match s {
+                Statement::Assignment(a) => { assignments.push(a); }
+                Statement::Ruleset(r) => { rulesets.push(r) }
+            }
+        }
+        Ok(Stylesheet { assignments, rulesets })
     }
 }
 
