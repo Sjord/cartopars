@@ -21,15 +21,30 @@ use pest::iterators::Pairs;
 
 type Node<'i> = pest_consume::Node<'i, Rule, ()>;
 type Result<T> = std::result::Result<T, Error<Rule>>;
+type Values = Vec<Value>;
+type Url = String;
+type Boolean = String;
+type StringExpr = String;
+type Percentage = String;
+type Expression = String;
+type Color = String;
+type Keyword = String;
+type Field = String;
 
 #[derive(Parser)]
 #[grammar = "cartocss.pest"]
 struct CartoParser;
 
 #[derive(Debug)]
+enum BodyPart {
+    Declarations(Vec<Declaration>),
+    Ruleset(Ruleset)
+}
+
+#[derive(Debug)]
 struct Ruleset {
-    selectors: String,
-    ruleset_body: String
+    selectors: Vec<String>,
+    body: Vec<BodyPart>
 }
 
 #[derive(Debug)]
@@ -39,9 +54,34 @@ enum Statement {
 }
 
 #[derive(Debug)]
+struct Function {
+    identifier: String,
+    values: Values,
+}
+
+#[derive(Debug)]
+enum Value {
+    Url(Url),
+    Boolean(Boolean),
+    StringExpr(StringExpr),
+    Percentage(Percentage),
+    Expression(Expression),
+    Color(Color),
+    Function(Function),
+    Keyword(Keyword),
+    Field(Field),
+}
+
+#[derive(Debug)]
 struct Assignment {
     key: String,
-    value: String,
+    values: Vec<Value>,
+}
+
+#[derive(Debug)]
+struct Declaration {
+    property: String,
+    values: Values
 }
 
 #[derive(Debug)]
@@ -56,35 +96,119 @@ impl CartoParser {
         Ok(())
     }
 
-    fn color_keyword(input: Node) -> Result<&str> {
-        Ok(input.as_str())
+    fn url(input: Node) -> Result<Url> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn boolean(input: Node) -> Result<Boolean> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn field(input: Node) -> Result<Field> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn keyword(input: Node) -> Result<Keyword> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn expression(input: Node) -> Result<Expression> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn color(input: Node) -> Result<Color> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn percentage(input: Node) -> Result<Percentage> {
+        Ok(input.as_str().to_owned())
     }
 
     fn variable(input: Node) -> Result<String> {
         Ok(input.as_str().to_owned())
     }
 
-    fn values(input: Node) -> Result<String> {
+    fn string_expr(input: Node) -> Result<String> {
         Ok(input.as_str().to_owned())
     }
 
-    fn selectors(input: Node) -> Result<String> {
+    fn selectors(input: Node) -> Result<Vec<String>> {
+        Ok(match_nodes!(input.into_children();
+            [selector(s)..] => s.collect()
+        ))
+    }
+
+    fn ruleset_body(input: Node) -> Result<BodyPart> {
+        Ok(match_nodes!(input.into_children();
+            [declarations(d)] => BodyPart::Declarations(d),
+            [ruleset(rs)] => BodyPart::Ruleset(rs),
+        ))
+    }
+
+    fn identifier(input: Node) -> Result<String> {
         Ok(input.as_str().to_owned())
     }
 
-    fn ruleset_body(input: Node) -> Result<String> {
+    fn function(input: Node) -> Result<Function> {
+        Ok(match_nodes!(input.into_children();
+            [identifier(i), values(v)] => Function { identifier: i, values: v }
+        ))
+    }
+
+    fn value(input: Node) -> Result<Value> {
+        Ok(match_nodes!(input.into_children();
+            [url(u)] => Value::Url(u),
+            [boolean(b)] => Value::Boolean(b),
+            [string_expr(se)] => Value::StringExpr(se),
+            [percentage(p)] => Value::Percentage(p),
+            [expression(e)] => Value::Expression(e),
+            [color(c)] => Value::Color(c),
+            [function(f)] => Value::Function(f),
+            [keyword(k)] => Value::Keyword(k),
+            [field(f)] => Value::Field(f),
+        ))
+    }
+
+    fn values(input: Node) -> Result<Values> {
+        Ok(match_nodes!(input.into_children();
+            [value(v)..] => v.collect()
+        ))
+    }
+
+    fn selector(input: Node) -> Result<String> {
         Ok(input.as_str().to_owned())
+    }
+
+    fn instance(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn property(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn declaration(input: Node) -> Result<Declaration> {
+        Ok(match_nodes!(input.into_children();
+            // [instance(i), property(p), values(v)] => 
+            [property(p), values(v)] => Declaration { property: p, values: v}
+        ))
+    }
+
+    fn declarations(input: Node) -> Result<Vec<Declaration>> {
+        Ok(match_nodes!(input.into_children();
+            [declaration(d)..] => d.collect()
+        ))
     }
 
     fn assignment(input: Node) -> Result<Assignment> {
         Ok(match_nodes!(input.into_children();
-            [variable(k), values(v)] => Assignment { key: k, value: v }
+            [variable(k), values(v)] => Assignment { key: k, values: v }
         ))
     }
 
     fn ruleset(input: Node) -> Result<Ruleset> {
         Ok(match_nodes!(input.into_children();
-            [selectors(selectors), ruleset_body(ruleset_body)] => Ruleset { selectors, ruleset_body }
+            [selectors(selectors), ruleset_body(body)..] => Ruleset { selectors, body: body.collect() }
         ))
     }
 

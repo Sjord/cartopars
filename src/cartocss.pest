@@ -15,7 +15,7 @@ value = { url | boolean | string_expr | percentage | expression | color | functi
 
 field = { "[" ~ identifier ~ "]" }
 
-function = { identifier ~ "(" ~ value ~ ("," ~ value)* ~ ")" }
+function = { identifier ~ "(" ~ values ~ ")" }
 
 // name these better
 expression = { exp_term ~ "+" ~ expression | exp_term ~ "-" ~ expression | exp_term }
@@ -77,8 +77,8 @@ declarations = { declaration ~ (";" ~ declaration?)* }
 // apparently [a=b],{ is valid
 // ruleset = { selector ~ ("," ~ selector)* ~ ","? ~ "{" ~ (declarations | ruleset)* ~ "}" }
 selectors = { selector ~ ("," ~ selector)* } 
-ruleset_body = { (declarations | ruleset)* }
-ruleset = { selectors ~ ","? ~ "{" ~ ruleset_body ~ "}" }
+ruleset_body = { declarations | ruleset }
+ruleset = { selectors ~ ","? ~ "{" ~ ruleset_body* ~ "}" }
 
 assignment = { variable ~ ":" ~ values ~ ";" }
 
