@@ -1,10 +1,10 @@
 use std::fs;
 use std::env;
 use std::path::Path;
-use std::collections::HashMap;
+use std::ops::Deref;
+use std::iter::FromIterator;
 
 extern crate pest;
-#[macro_use]
 extern crate pest_derive;
 extern crate pest_consume;
 
@@ -17,7 +17,6 @@ use stopwatch::Stopwatch;
 use pest_consume::Parser;
 use pest_consume::Error;
 use pest_consume::match_nodes;
-use pest::iterators::Pairs;
 
 type Node<'i> = pest_consume::Node<'i, Rule, ()>;
 type Result<T> = std::result::Result<T, Error<Rule>>;
@@ -31,6 +30,9 @@ type Color = String;
 type Keyword = String;
 type Field = String;
 
+#[derive(Debug)]
+struct Body(Vec<BodyPart>);
+
 #[derive(Parser)]
 #[grammar = "cartocss.pest"]
 struct CartoParser;
@@ -41,10 +43,43 @@ enum BodyPart {
     Ruleset(Ruleset)
 }
 
+
 #[derive(Debug)]
 struct Ruleset {
     selectors: Vec<String>,
-    body: Vec<BodyPart>
+    body: Body,
+}
+
+impl Deref for Body {
+    type Target = Vec<BodyPart>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromIterator<BodyPart> for Body {
+    fn from_iter<I: IntoIterator<Item=BodyPart>>(iter: I) -> Self {
+        Body(iter.into_iter().collect())
+    }
+}
+
+impl Body {
+    /// Get declarations from the body, but not of nested Rulesets
+    fn get_declarations(&self) -> Vec<&Declaration> {
+        let mut result : Vec<&Declaration> = Vec::new();
+        for bp in &self.0 {
+            match bp {
+                BodyPart::Declarations(ds) => {
+                    for d in ds {
+                        result.push(d);
+                    }
+                }
+                BodyPart::Ruleset(_) => (),
+            };
+        }
+        result
+    }
 }
 
 #[derive(Debug)]
@@ -252,7 +287,8 @@ fn main() {
         let ast = CartoParser::stylesheet(node);
         sw.stop();
         // println!("{} {}", ss.as_str().unwrap(), sw.elapsed_ms());
-        println!("{:#?}", ast);
+        // println!("{:#?}", ast);
+        println!("{:#?}", ast.unwrap().rulesets[0].body.get_declarations()[0].values[0]);
         sw.reset();
     }
 }
