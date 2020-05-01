@@ -15,7 +15,7 @@ value = { url | boolean | string_expr | percentage | expression | color | functi
 
 field = { "[" ~ identifier ~ "]" }
 
-function = { identifier ~ "(" ~ value ~ ("," ~ value)* ~ ")" }
+function = { identifier ~ "(" ~ values ~ ")" }
 
 // name these better
 expression = { exp_term ~ "+" ~ expression | exp_term ~ "-" ~ expression | exp_term }
@@ -75,8 +75,13 @@ selector = { ("Map" | layer | class | filter | attachment)+ }
 declarations = { declaration ~ (";" ~ declaration?)* } 
 
 // apparently [a=b],{ is valid
-ruleset = { selector ~ ("," ~ selector)* ~ ","? ~ "{" ~ (declarations | ruleset)* ~ "}" }
+// ruleset = { selector ~ ("," ~ selector)* ~ ","? ~ "{" ~ (declarations | ruleset)* ~ "}" }
+selectors = { selector ~ ("," ~ selector)* } 
+ruleset_body = { declarations | ruleset }
+ruleset = { selectors ~ ","? ~ "{" ~ ruleset_body* ~ "}" }
 
 assignment = { variable ~ ":" ~ values ~ ";" }
 
-stylesheet = { SOI ~ (assignment | ruleset)* ~ EOI }
+statement = { assignment | ruleset }
+
+stylesheet = { SOI ~ statement* ~ EOI }
