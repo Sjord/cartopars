@@ -26,9 +26,28 @@ type Boolean = String;
 type StringExpr = String;
 type Percentage = String;
 type Expression = String;
-type Color = String;
 type Keyword = String;
 type Field = String;
+
+#[derive(Debug)]
+struct Color {
+    hex: String
+}
+
+impl Color {
+    fn from_hex(hex : &String) -> Color {
+        Color { hex: hex.to_owned() }
+    }
+
+    fn from_keyword(keyword : &String) -> Color {
+        // FIXME map keyword to color
+        Color { hex: keyword.to_owned() }
+    }
+
+    fn darken(&self, perc : &Percentage) -> Color {
+        Color::from_hex(&self.hex)
+    }
+}
 
 #[derive(Debug)]
 struct Body(Vec<BodyPart>);
@@ -94,6 +113,21 @@ struct Function {
     values: Values,
 }
 
+impl Function {
+    fn evaluate(&self) -> std::result::Result<Value, &str> {
+        match self.identifier.as_str() {
+            "darken" => match &self.values[0] {
+                Value::Color(c) => match &self.values[1] {
+                    Value::Percentage(perc) => Ok(Value::Color(c.darken(perc))),
+                    _ => Err("darken expects a percentage as second parameter")
+                }
+                _ => Err("darken expects a color as first parameter")
+            }
+            _ => Err("unimplemented function")
+        }
+    }
+}
+
 #[derive(Debug)]
 enum Value {
     Url(Url),
@@ -105,6 +139,19 @@ enum Value {
     Function(Function),
     Keyword(Keyword),
     Field(Field),
+}
+
+impl Value {
+    fn get_color(&self) -> std::result::Result<Color, &str> {
+        match &self {
+            Value::Color(c) => Ok(Color::from_hex(&c.hex)),
+            Value::Function(f) => match f.evaluate() {
+                Ok(Value::Color(c)) => Ok(c),
+                _ => Err("not a Color")
+            }
+            _ => Err("not a Color")
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -151,8 +198,24 @@ impl CartoParser {
         Ok(input.as_str().to_owned())
     }
 
-    fn color(input: Node) -> Result<Color> {
+    fn color_hex_long(input: Node) -> Result<String> {
         Ok(input.as_str().to_owned())
+    }
+
+    fn color_hex_short(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn color_keyword(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn color(input: Node) -> Result<Color> {
+        Ok(match_nodes!(input.into_children();
+            [color_hex_long(c)] => Color::from_hex(&c),
+            [color_hex_short(c)] => Color::from_hex(&c),
+            [color_keyword(c)] => Color::from_keyword(&c)
+        ))
     }
 
     fn percentage(input: Node) -> Result<Percentage> {
@@ -288,7 +351,7 @@ fn main() {
         sw.stop();
         // println!("{} {}", ss.as_str().unwrap(), sw.elapsed_ms());
         // println!("{:#?}", ast);
-        println!("{:#?}", ast.unwrap().rulesets[0].body.get_declarations()[0].values[0]);
+        println!("{:#?}", ast.unwrap().rulesets[0].body.get_declarations()[0].values[0].get_color());
         sw.reset();
     }
 }
