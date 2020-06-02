@@ -29,23 +29,47 @@ type Expression = String;
 type Keyword = String;
 type Field = String;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Color {
-    hex: String
+    red: u8,
+    green: u8,
+    blue: u8,
+    opacity: u8,
 }
 
 impl Color {
+    fn rgba(red: u8, green: u8, blue: u8, opacity: u8) -> Color {
+        Color { red, green, blue, opacity }
+    }
+
     fn from_hex(hex : &String) -> Color {
-        Color { hex: hex.to_owned() }
+        match hex.len() {
+            4 => {
+                // #abc
+                let red = 17 * u8::from_str_radix(&hex[1..2], 16).unwrap();
+                let green = 17 * u8::from_str_radix(&hex[2..3], 16).unwrap();
+                let blue = 17 * u8::from_str_radix(&hex[3..4],16).unwrap();
+                Color::rgba(red, green, blue, 255)
+            }
+            7 => {
+                // #aabbcc
+                let red = u8::from_str_radix(&hex[1..3], 16).unwrap();
+                let green = u8::from_str_radix(&hex[3..5], 16).unwrap();
+                let blue = u8::from_str_radix(&hex[5..7],16).unwrap();
+                Color::rgba(red, green, blue, 255)
+            }
+            _ => panic!("color not recognized")
+        }
     }
 
     fn from_keyword(keyword : &String) -> Color {
         // FIXME map keyword to color
-        Color { hex: keyword.to_owned() }
+        Color::rgba(123,123,123,123)
     }
 
     fn darken(&self, perc : &Percentage) -> Color {
-        Color::from_hex(&self.hex)
+        // FIXME implement
+        self.clone()
     }
 }
 
@@ -144,7 +168,7 @@ enum Value {
 impl Value {
     fn get_color(&self) -> std::result::Result<Color, &str> {
         match &self {
-            Value::Color(c) => Ok(Color::from_hex(&c.hex)),
+            Value::Color(c) => Ok(c.clone()),
             Value::Function(f) => match f.evaluate() {
                 Ok(Value::Color(c)) => Ok(c),
                 _ => Err("not a Color")
