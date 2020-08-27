@@ -4,6 +4,10 @@ use std::path::Path;
 use std::ops::Deref;
 use std::iter::FromIterator;
 use std::cell::RefCell;
+use std::sync::Mutex;
+
+extern crate rayon;
+use rayon::prelude::*;
 
 extern crate pest;
 extern crate pest_derive;
@@ -19,7 +23,7 @@ use pest_consume::Parser;
 use pest_consume::Error;
 use pest_consume::match_nodes;
 
-type Node<'i, 'a> = pest_consume::Node<'i, Rule, &'a RefCell<ParserState>>;
+type Node<'i, 'a> = pest_consume::Node<'i, Rule, &'a Mutex<ParserState>>;
 type Result<T> = std::result::Result<T, Error<Rule>>;
 type Values = Vec<Value>;
 type Url = String;
@@ -344,7 +348,7 @@ impl CartoParser {
 
     fn stylesheet(input: Node) -> Result<Stylesheet> {
         let parser_state = input.user_data();
-        parser_state.borrow_mut().inc();
+        parser_state.lock().unwrap().inc();
 
         let statements : Vec<Statement> = match_nodes!(input.into_children();
             [statement(s).., EOI(_)] => s.collect(),
@@ -377,21 +381,24 @@ fn main() {
     let contents = fs::read_to_string(mml_path).unwrap();
     let project = YamlLoader::load_from_str(&contents).unwrap();
     let stylesheets = project[0]["Stylesheet"].as_vec().unwrap();
-    let mut sw = Stopwatch::new();
-    let parser_state = RefCell::new(ParserState {count: 3});
-    for ss in stylesheets {
+    let parser_state = Mutex::new(ParserState {count: 3});
+    // for ss in stylesheets {
+    stylesheets.par_iter().for_each(|ss| {
         let path = mml_path.with_file_name(ss.as_str().unwrap());
         let contents = fs::read_to_string(&path).unwrap();
+
+        let mut sw = Stopwatch::new();
         sw.start();
         let node = CartoParser::parse_with_userdata(Rule::stylesheet, &contents, &parser_state)
             .map_err(|e| e.with_path(path.to_str().unwrap()))
             .unwrap().single().unwrap();
         let ast = CartoParser::stylesheet(node);
         sw.stop();
-        // println!("{} {}", ss.as_str().unwrap(), sw.elapsed_ms());
+        
+        println!("{} {}", ss.as_str().unwrap(), sw.elapsed_ms());
         // println!("{:#?}", ast);
-        println!("{:#?}", ast.unwrap().rulesets[0].body.get_declarations()[0].values[0].get_color());
+        // println!("{:#?}", ast.unwrap().rulesets[0].body.get_declarations()[0].values[0].get_color());
         sw.reset();
-    }
-    println!("{:?}", parser_state.borrow().count);
+    });
+    println!("{:?}", parser_state.lock().unwrap().count);
 }
