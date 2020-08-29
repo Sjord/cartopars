@@ -25,9 +25,11 @@ type Url = String;
 type Boolean = bool;
 type StringExpr = String;
 type Percentage = String;
-type Expression = String;
+type Expression = ExpressionNode;
 type Keyword = String;
 type Field = String;
+type Number = String;
+type Variable = String;
 
 #[derive(Debug, Copy, Clone)]
 struct Color {
@@ -163,6 +165,8 @@ enum Value {
     Function(Function),
     Keyword(Keyword),
     Field(Field),
+    Variable(Variable),
+    Number(Number),
 }
 
 impl Value {
@@ -196,6 +200,19 @@ struct Stylesheet {
     rulesets: Vec<Ruleset>
 }
 
+#[derive(Debug)]
+struct BifurcatingNode {
+    left : ExpressionNode,
+    right : ExpressionNode,
+    operator : String,
+}
+
+#[derive(Debug)]
+enum ExpressionNode {
+    Value(Box<Value>),
+    BifurcatingNode(Box<BifurcatingNode>)
+}
+
 #[pest_consume::parser]
 impl CartoParser {
     fn EOI(_input: Node) -> Result<()> {
@@ -222,8 +239,38 @@ impl CartoParser {
         Ok(input.as_str().to_owned())
     }
 
-    fn expression(input: Node) -> Result<Expression> {
+    fn number(input: Node) -> Result<Number> {
         Ok(input.as_str().to_owned())
+    }
+
+    fn factor(input: Node) -> Result<Expression> {
+        Ok(match_nodes!(input.into_children();
+            [expression(e)] => e,
+            [number(n)] => ExpressionNode::Value(Box::new(Value::Number(n))),
+            [variable(v)] => ExpressionNode::Value(Box::new(Value::Variable(v))),
+        ))
+    }
+
+    fn exp_term(input: Node) -> Result<Expression> {
+        Ok(match_nodes!(input.into_children();
+            [factor(f), high_prec_operator(o), exp_term(e)] => ExpressionNode::BifurcatingNode(Box::new(BifurcatingNode { left: f, operator: o, right: e })),
+            [factor(f)] => f,
+        ))
+    }
+
+    fn low_prec_operator(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn high_prec_operator(input: Node) -> Result<String> {
+        Ok(input.as_str().to_owned())
+    }
+
+    fn expression(input: Node) -> Result<Expression> {
+        Ok(match_nodes!(input.into_children();
+            [exp_term(t), low_prec_operator(o), expression(e)] => ExpressionNode::BifurcatingNode(Box::new(BifurcatingNode { left: t, operator: o, right: e })),
+            [exp_term(t)] => t,
+        ))
     }
 
     fn color_hex_long(input: Node) -> Result<String> {

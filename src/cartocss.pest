@@ -18,8 +18,10 @@ field = { "[" ~ identifier ~ "]" }
 function = { identifier ~ "(" ~ values ~ ")" }
 
 // name these better
-expression = { exp_term ~ "+" ~ expression | exp_term ~ "-" ~ expression | exp_term }
-exp_term = { factor ~ "*" ~ exp_term | factor ~ "/" ~ exp_term | factor }
+low_prec_operator = { "+" | "-" }
+high_prec_operator = { "*" | "/" }
+expression = { exp_term ~ low_prec_operator ~ expression | exp_term }
+exp_term = { factor ~ high_prec_operator ~ exp_term | factor }
 factor = { "(" ~ expression ~ ")" | number | variable }
 
 string_expr = { (string | field) ~ ("+" ~ (string | field))* }
