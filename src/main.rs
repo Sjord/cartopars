@@ -22,7 +22,7 @@ type Node<'i> = pest_consume::Node<'i, Rule, ()>;
 type Result<T> = std::result::Result<T, Error<Rule>>;
 type Values = Vec<Value>;
 type Url = String;
-type Boolean = String;
+type Boolean = bool;
 type StringExpr = String;
 type Percentage = String;
 type Expression = String;
@@ -207,7 +207,11 @@ impl CartoParser {
     }
 
     fn boolean(input: Node) -> Result<Boolean> {
-        Ok(input.as_str().to_owned())
+        match input.as_str() {
+            "true" => Ok(true),
+            "false" => Ok(false),
+            _=> Err(input.error("not a boolean"))
+        }
     }
 
     fn field(input: Node) -> Result<Field> {
